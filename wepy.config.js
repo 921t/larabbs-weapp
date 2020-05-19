@@ -1,11 +1,12 @@
-const path = require('path');
-var prod = process.env.NODE_ENV === 'production';
+const path = require('path')
+var prod = process.env.NODE_ENV === 'production'
 
 module.exports = {
   wpyExt: '.wpy',
   eslint: true,
   cliLogs: !prod,
-  static: ['static'],
+  // static: ['static'],
+  static: ['./src/assets'],
   build: {
   },
   resolve: {
@@ -35,4 +36,3 @@ module.exports = {
     noPromiseAPI: ['createSelectorQuery']
   }
 }
-
