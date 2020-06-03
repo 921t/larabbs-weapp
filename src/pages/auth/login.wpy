@@ -43,7 +43,6 @@
           <a url="/pages/auth/register">注册新用户</a>
         </div>
 
-
         <div class="weui-btn-area">
           <button class="weui-btn" type="primary" @tap="submit">登录</button>
         </div>
