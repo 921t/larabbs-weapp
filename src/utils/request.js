@@ -1,4 +1,5 @@
 import wepy from '@wepy/core'
+import store from '@/store'
 
 const host = 'http://larabbs.test/api/v1/'
 
@@ -40,6 +41,30 @@ const request = async (url, options = {}, showLoading = true) => {
   return Promise.reject(error)
 }
 
+const checkToken = async () => {
+  const accessToken = store.getters.accessToken
+  const expiredAt = store.getters.accessTokenExpiredAt
+
+  if (accessToken && new Date().getTime() > expiredAt) {
+    try {
+      return store.dispatch('refresh')
+    } catch (e) {
+      return store.dispatch('login')
+    }
+  }
+}
+
+const authRequest = async (url, options = {}, showLoading = true) => {
+  await checkToken()
+
+  options.header = {
+    Authorization: 'Bearer ' + store.getters.accessToken
+  }
+
+  return await request(url, options, showLoading)
+}
+
 export {
-  request
+  request,
+  authRequest
 }
