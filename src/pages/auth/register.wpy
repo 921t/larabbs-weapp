@@ -15,8 +15,6 @@
   <div class="page">
     <div class="page__bd register-wrap">
 
-      <div class="weui-toptips weui-toptips_warn" v-if="errorMessage">{{ errorMessage }}</div>
-
       <div class="weui-cells__title">Larabbs 手机注册</div>
 
       <div class="weui-cells__title {{ errors.phone ? 'weui-cell_warn' : ''}}">手机号</div>
@@ -32,6 +30,7 @@
           </div>
         </div>
       </div>
+
       <div v-if="errors.phone" class="weui-cells__tips error-message">{{ errors.phone[0] }}</div>
 
       <div class="weui-btn-area">
@@ -40,7 +39,8 @@
 
       <!-- 验证码输入模态框 -->
       <modal class="modal" v-if="captchaModalShow" no-cancel bindconfirm="sendVerificationCode">
-        <div v-if="errors.captchaValue" class="weui-cells__tips error-message">{{ errors.captchaValue[0] }}</div>
+<!--        <div v-if="errors.captchaValue" class="weui-cells__tips error-message">{{ errors.captchaValue[0] }}</div>-->
+        <div v-if="errors.captchaValue" class="weui-cells__tips error-message">{{ errors.captchaValue }}</div>
         <div class="weui-cell weui-cell_input weui-cell_vcode">
           <div class="weui-cell__bd">
             <input class="weui-input" placeholder="图片验证码" v-model="captchaValue"/>
@@ -63,7 +63,7 @@
 <script>
   import wepy from '@wepy/core'
   import store from '@/store'
-  import {getCaptcha} from '@/api/auth'
+  import {getCaptcha, getVerificationCode} from '@/api/auth'
   import WeValidator from 'we-validator'
 
   wepy.page({
@@ -75,7 +75,8 @@
       phoneDisabled: false,
       captchaModalShow: false,
       captcha: {},
-      errors: {}
+      errors: {},
+      verificationCode: {}
     },
     onReady() {
       this.initValidator()
@@ -108,6 +109,7 @@
 
         try {
           let response = await getCaptcha(this.form.phone)
+
           this.captcha = {
             key: response.data.captcha_key,
             imageContent: response.data.captcha_image_content,
@@ -119,6 +121,33 @@
           if (e.response.statusCode === 422) {
             this.errors = e.response.data.errors
           }
+        }
+      },
+      async sendVerificationCode() {
+        if (!this.captchaValue) {
+          this.$set(this.errors, 'captchaValue', ['请输入图片验证码'])
+          return false
+        }
+
+        if (new Date().getTime() > this.captcha.expiredAt) {
+          this.$set(this.errors, 'captchaValue', ['请输入图片验证码'])
+          await this.getCaptchaCode()
+          return false
+        }
+
+        try {
+          let response = await getVerificationCode(this.captcha.key, this.captchaValue)
+
+          this.verificationCode = {
+            key: response.data.key,
+            expiredAt: Date.parse(response.data.expired_at)
+          }
+
+          this.captchaModalShow = false
+          this.phoneDisabled = true
+        } catch (e) {
+          await this.getCaptchaCode()
+          this.$set(this.errors, 'captchaValue', e.response.data.message)
         }
       }
     }
