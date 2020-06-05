@@ -2,7 +2,7 @@ import wepy from '@wepy/core'
 import {login, refresh, logout, register} from '@/api/auth'
 import * as auth from '@/utils/auth'
 import isEmpty from 'lodash/isEmpty'
-import {getCurrentUser} from '@/api/user'
+import {getCurrentUser, updateUser} from '@/api/user'
 
 const getDefaultState = () => {
   return {
@@ -67,6 +67,14 @@ const actions = {
     await register(params)
 
     await dispatch('login')
+  },
+
+  async updateUser({commit}, params = {}) {
+    const response = await updateUser(params)
+
+    commit('setUser', response.data)
+
+    auth.setUser(response.data)
   }
 }
 
