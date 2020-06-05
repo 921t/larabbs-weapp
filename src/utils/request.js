@@ -64,7 +64,42 @@ const authRequest = async (url, options = {}, showLoading = true) => {
   return await request(url, options, showLoading)
 }
 
+const uploadFile = async (url, options = {}, showLoading = true) => {
+  if (showLoading) {
+    wx.showLoading({title: '上传中'})
+  }
+
+  options.url = host + url
+
+  await checkToken()
+
+  options.header = {
+    Authorization: 'Bearer ' + store.getters.accessToken
+  }
+
+  const response = await wepy.wx.uploadFile(options)
+
+  if (showLoading) {
+    wx.hideLoading()
+  }
+
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    return response
+  }
+
+  wx.showModal({
+    title: '提示',
+    content: '服务器错误，请联系管理员或重试'
+  })
+
+  const error = new Error(response.data.message)
+  error.response = response
+
+  return Promise.reject(error)
+}
+
 export {
   request,
-  authRequest
+  authRequest,
+  uploadFile
 }
