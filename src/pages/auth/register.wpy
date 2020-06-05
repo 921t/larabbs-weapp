@@ -33,14 +33,55 @@
 
       <div v-if="errors.phone" class="weui-cells__tips error-message">{{ errors.phone[0] }}</div>
 
+      <div class="weui-cells__title" :class="{'weui-cell_warn': errors.verification_code}">短信验证码</div>
+      <div class="weui-cells weui-cells_after-title">
+        <div class="weui-cell weui-cell_input" :class="{'weui-cell_warn': errors.verification_code}">
+          <div class="weui-cell__bd">
+            <input class="weui-input" v-model="form.verification_code" placeholder="请输入短信验证码" name="verification_code" />
+          </div>
+          <div class="weui-cell__ft">
+            <icon v-if="errors.verification_code" type="warn" size="23" color="#E64340"></icon>
+          </div>
+        </div>
+      </div>
+      <div v-if="errors.verification_code" class="weui-cells__tips error-message">{{ errors.verification_code[0] }}</div>
+
+      <!-- 姓名 -->
+      <div class="weui-cells__title" :class="{'weui-cell_warn': errors.name}">姓名</div>
+      <div class="weui-cells weui-cells_after-title">
+        <div class="weui-cell weui-cell_input" :class="{'weui-cell_warn': errors.name}">
+          <div class="weui-cell__bd">
+            <input class="weui-input" placeholder="请输入姓名" name="name" v-model="form.name"/>
+          </div>
+          <div class="weui-cell__ft">
+            <icon v-if="errors.name" type="warn" size="23" color="#E64340"></icon>
+          </div>
+        </div>
+      </div>
+      <div v-if="errors.name" class="weui-cells__tips error-message">{{ errors.name[0] }}</div>
+
+      <!-- 密码 -->
+      <div class="weui-cells__title" :class="{'weui-cell_warn': errors.password}">密码</div>
+      <div class="weui-cells weui-cells_after-title">
+        <div class="weui-cell weui-cell_input" :class="{'weui-cell_warn': errors.password}">
+          <div class="weui-cell__bd">
+            <input class="weui-input" v-model="form.password" placeholder="请输入密码" name="password" type="password"/>
+          </div>
+          <div class="weui-cell__ft">
+            <icon v-if="errors.password" type="warn" size="23" color="#E64340"></icon>
+          </div>
+        </div>
+      </div>
+      <div v-if="errors.password" class="weui-cells__tips error-message">{{ errors.password[0] }}</div>
+
       <div class="weui-btn-area">
         <button class="weui-btn" type="primary" @tap="submit">注册</button>
       </div>
 
       <!-- 验证码输入模态框 -->
       <modal class="modal" v-if="captchaModalShow" no-cancel bindconfirm="sendVerificationCode">
-<!--        <div v-if="errors.captchaValue" class="weui-cells__tips error-message">{{ errors.captchaValue[0] }}</div>-->
-        <div v-if="errors.captchaValue" class="weui-cells__tips error-message">{{ errors.captchaValue }}</div>
+        <div v-if="errors.captchaValue" class="weui-cells__tips error-message">{{ errors.captchaValue[0] }}</div>
+<!--        <div v-if="errors.captchaValue" class="weui-cells__tips error-message">{{ errors.captchaValue }}</div>-->
         <div class="weui-cell weui-cell_input weui-cell_vcode">
           <div class="weui-cell__bd">
             <input class="weui-input" placeholder="图片验证码" v-model="captchaValue"/>
@@ -67,6 +108,7 @@
   import WeValidator from 'we-validator'
 
   wepy.page({
+    store,
     data: {
       form: {
         phone: null
@@ -98,6 +140,52 @@
           },
           onMessage: (data) => {
             this.$set(this.errors, data.name, [data.msg])
+          }
+        })
+
+        this.formValidatorInstance = new WeValidator({
+          multiCheck: true,
+          rules: {
+            phone: {
+              required: true,
+              mobile: true
+            },
+            name: {
+              required: true
+            },
+            verification_code: {
+              required: true
+            },
+            password: {
+              required: true
+              // minlength: 6
+            }
+          },
+          messages: {
+            phone: {
+              required: '请输入手机号',
+              mobile: '手机号格式不正确'
+            },
+            name: {
+              required: '请输入姓名'
+            },
+            verification_code: {
+              required: '请输入手机验证码'
+            },
+            password: {
+              required: '请输入密码'
+              // minlength: '密码最少 6 位数'
+            }
+          },
+          onMessage: (data) => {
+            let errors = {}
+            Object.keys(data).map(function (key) {
+              errors[key] = [data[key].msg]
+            })
+
+            console.log(errors)
+
+            this.errors = errors
           }
         })
       },
@@ -148,6 +236,62 @@
         } catch (e) {
           await this.getCaptchaCode()
           this.$set(this.errors, 'captchaValue', e.response.data.message)
+        }
+      },
+      async submit() {
+        this.errors = {}
+        if (!this.formValidatorInstance.checkData(this.form)) {
+          return
+        }
+
+        if (!this.verificationCode.key) {
+          wx.showToast({
+            title: '请发送验证码',
+            icon: 'none',
+            duration: 2000
+          })
+          return false
+        }
+
+        if (new Date().getTime() > this.verificationCode.expiredAt) {
+          wx.showToast({
+            title: '验证码已过期',
+            icon: 'none',
+            duration: 2000
+          })
+          return false
+        }
+
+        try {
+          let formData = this.form
+          formData.verification_key = this.verificationCode.key
+
+          await this.$store.dispatch('register', formData)
+
+          wx.showToast({
+            title: '注册成功',
+            icon: 'success'
+          })
+
+          setTimeout(async () => {
+            wx.switchTab({
+              url: '/pages/user'
+            })
+          }, 2000)
+        } catch (e) {
+          if (e.response.statusCode === 422) {
+            this.errors = e.response.data.errors
+          } else {
+            wx.showToast({
+              title: e.response.data.message,
+              icon: 'none',
+              duration: 2000
+            })
+          }
+          // if (e.response.statusCode === 401) {
+          //   this.$set(this.errors, 'verification_code', ['验证码错误'])
+          // }
+          //
         }
       }
     }
