@@ -2,48 +2,60 @@
   .weui-flex {
     align-items: center;
   }
+
   .weui-cells {
     margin-top: 0;
     opacity: 0;
     transition: .3s;
+
     &:before, &:after {
       display: none;
     }
+
     &_show {
       opacity: 1;
     }
   }
+
   .weui-cell {
     &:before {
       right: 15px;
     }
   }
+
   .category-list__item {
     margin: 10px 0;
     background-color: #FFFFFF;
     border-radius: 2px;
     overflow: hidden;
+
     &:first-child {
       margin-top: 0;
     }
   }
+
   .category-list__item_selected {
     background-color: #eeeeee;
   }
+
   .category-list__img {
     width: 30px;
     height: 30px;
   }
+
   .category-list__item-hd {
     padding: 20px;
     transition: opacity .3s;
+
     &_show {
       opacity: .4;
     }
   }
+
   .category-list__item-bd {
     height: 0;
     overflow: hidden;
+
     &_show {
       height: auto;
     }
@@ -58,12 +70,13 @@
       <div class="category-list__item">
         <div class="weui-flex category-list__item-hd" @tap="categoriesToggle">
           <div class="weui-flex__item page-title">{{ currentCategoryName }}</div>
-          <image class="category-list__img" src="/assets/images/category.png" />
+          <image class="category-list__img" src="/assets/images/category.png"/>
         </div>
         <div class="category-list__item-bd"
              :class="{'category-list__item-bd_show' : categoryOpen}">
           <div class="weui-cells" :class="{ 'weui-cells_show' : categoryOpen }">
-            <div @tap="changeCategory" class="weui-cell weui-cell_access" :class="{'category-list__item_selected' : !currentCategoryId }">
+            <div @tap="changeCategory" class="weui-cell weui-cell_access"
+                 :class="{'category-list__item_selected' : !currentCategoryId }">
               <div class="weui-cell__bd">话题</div>
             </div>
             <div v-for="category in categories" :key="category.id">
@@ -77,7 +90,7 @@
         </div>
       </div>
 
-      <topic-list :topics="topics" :no-more-data="noMoreData"></topic-list>
+      <topic-list :topics="resourceData" :no-more-data="noMoreData"></topic-list>
     </div>
   </div>
 </template>
@@ -94,16 +107,14 @@
 <script>
   import wepy from '@wepy/core'
   import {getTopics, getCategories} from '@/api/topic'
+  import listRefresh from '@/mixins/list-refresh'
 
   wepy.page({
+    mixins: [ listRefresh ],
     data: {
-      topics: [],
       categories: [],
       currentCategory: {},
-      categoryOpen: false,
-      page: 1,
-      noMoreData: false,
-      isLoading: false
+      categoryOpen: false
     },
     computed: {
       currentCategoryId() {
@@ -114,31 +125,11 @@
       }
     },
     async onLoad() {
-      await this.loadTopics()
       await this.loadCategories()
-    },
-    async onPullDownRefresh() {
-      await this.loadTopics(true)
-      wx.stopPullDownRefresh()
-    },
-    async onReachBottom() {
-      if (this.noMoreData || this.isLoading) {
-        return
-      }
-
-      this.isLoading = true
-      this.page += 1
-
-      await this.loadTopics()
-
-      this.isLoading = false
+      await this.loadData()
     },
     methods: {
-      async loadTopics(reset = false) {
-        if (reset) {
-          this.page = 1
-        }
-
+      async fetchData() {
         let params = {
           page: this.page,
           include: 'user,category'
@@ -148,15 +139,7 @@
           params['filter[category_id]'] = this.currentCategoryId
         }
 
-        const response = await getTopics(params)
-
-        this.topics = reset ? response.data.data : this.topics.concat(response.data.data)
-
-        const pagination = response.data.meta
-
-        if (pagination.current_page === pagination.last_page) {
-          this.noMoreData = true
-        }
+        return getTopics(params)
       },
       async loadCategories() {
         let categories = wx.getStorageSync('categories')
@@ -179,7 +162,7 @@
         this.categoryOpen = false
         this.page = 1
 
-        await this.loadTopics(true)
+        await this.loadData(true)
       }
     }
   })
