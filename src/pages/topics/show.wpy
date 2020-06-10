@@ -1,19 +1,26 @@
 <style lang="less">
-  .page{
+  .page {
     background-color: #FFFFFF;
   }
+
   .avatar-wrap {
     position: relative;
     margin-right: 10px;
   }
+
   .avatar {
     width: 50px;
     height: 50px;
     display: block;
     border-radius: 50%;
   }
+
   .topic-title {
     padding: 15px;
+  }
+
+  .delete-button {
+    margin-top: 15px;
   }
 </style>
 
@@ -35,13 +42,19 @@
       <div class="topic-title">
         <div class="page__title">{{ topic.title }}</div>
         <div class="weui-media-box__info topic-info">
-          <div class="weui-media-box__info__meta">{{ topic.category.name }} • </div>
-          <div class="weui-media-box__info__meta"><datetime-diff :datetime="topic.updated_at"></datetime-diff> • </div>
+          <div class="weui-media-box__info__meta">{{ topic.category.name }} •</div>
+          <div class="weui-media-box__info__meta">
+            <datetime-diff :datetime="topic.updated_at"></datetime-diff>
+            •
+          </div>
           <div class="weui-media-box__info__meta">{{ topic.reply_count }} 次回复</div>
         </div>
       </div>
       <div class="weui-article">
-        <rich-text :nodes="topic.body"></rich-text>
+        <rich-text :nodes="topic.body" bindtap="tap"></rich-text>
+        <button class="weui-btn weui-btn_mini delete-button" type="default" size="mini" v-if="canDelete"
+                @tap="deleteTopic">删除
+        </button>
       </div>
     </div>
   </div>
@@ -49,19 +62,34 @@
 
 <config>
   {
-    navigationBarTitleText: '话题详情',
-    usingComponents: {
-      "datetime-diff": "~@/components/datetime-diff"
-    }
+  navigationBarTitleText: '话题详情',
+  usingComponents: {
+  "datetime-diff": "~@/components/datetime-diff"
+  }
   }
 </config>
 <script>
   import wepy from '@wepy/core'
-  import {getTopic} from '@/api/topic'
+  import {getTopic, deleteTopic} from '@/api/topic'
+  import store from '@/store'
+  import {mapGetters} from '@wepy/x'
+  import eventHub from '@/common/eventHub'
 
   wepy.page({
+    store,
     data: {
       topic: null
+    },
+    computed: {
+      ...mapGetters(['user', 'isLoggedIn']),
+
+      canDelete() {
+        if (!this.isLoggedIn || !this.topic) {
+          return false
+        }
+
+        return this.topic.user_id === this.user.id
+      }
     },
     onLoad(options) {
       this.loadTopic(options.id)
@@ -77,6 +105,30 @@
         topic.body = topic.body.replace('<img', '<img style="max-width:100%;height:auto"')
 
         this.topic = topic
+      },
+      async deleteTopic() {
+        const res = await wepy.wx.showModal({
+          title: '确认删除',
+          content: '您确认删除该话题吗',
+          confirmText: '删除',
+          cancelText: '取消'
+        })
+
+        if (!res.confirm) {
+          return
+        }
+
+        await deleteTopic(this.topic.id)
+
+        wx.showToast({
+          title: '删除成功',
+          icon: 'success'
+        })
+
+        setTimeout(function () {
+          eventHub.$emit('topic-deleted', this.topic)
+          wx.navigateBack()
+        }, 2000)
       }
     }
   })

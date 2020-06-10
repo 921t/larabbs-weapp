@@ -21,3 +21,10 @@ export function getUserTopics(userId, data) {
     data
   })
 }
+
+export function deleteTopic(id, data) {
+  return authRequest('topics/' + id, {
+    method: 'delete',
+    data
+  })
+}
