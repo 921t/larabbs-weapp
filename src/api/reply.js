@@ -5,3 +5,9 @@ export function getReplies(topicId, data) {
     data
   })
 }
+
+export function getUserReplies(userId, data) {
+  return authRequest('users/' + userId + '/replies', {
+    data
+  })
+}

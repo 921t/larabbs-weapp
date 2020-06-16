@@ -3,34 +3,32 @@
     <reply-list :replies="resourceData" :no-more-data="noMoreData"></reply-list>
   </div>
 </template>
-
 <config>
   {
-  navigationBarTitleText: '回复列表',
-  enablePullDownRefresh: true,
-  usingComponents:  {
-    "reply-list":  "~@/components/reply-list"
+    navigationBarTitleText: '回复列表',
+    enablePullDownRefresh: true,
+    usingComponents: {
+      "reply-list": "~@/components/reply-list"
     }
   }
 </config>
-
 <script>
   import wepy from '@wepy/core'
-  import {getReplies} from '@/api/reply'
-  import listRefresh from '@/mixins/list-refresh'
+  import {getUserReplies} from '@/api/reply'
+  import listRefresh from '@/mixins/list-refresh.js'
 
   wepy.page({
-    mixins: [listRefresh],
+    mixins: [ listRefresh ],
     data: {
-      topicId: 0
+      userId: 0
     },
     async onLoad(options) {
-      this.topicId = options.topic_id
+      this.userId = options.id
       await this.loadData()
     },
     methods: {
       fetchData() {
-        return getReplies(this.topicId, {
+        return getUserReplies(this.userId, {
           page: this.page,
           include: 'user'
         })
